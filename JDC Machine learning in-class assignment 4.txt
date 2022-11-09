@@ -1,0 +1,188 @@
+#John David Conley
+#Machine Learning
+#Assignment 5
+#11-8-2022
+#https://github.com/DavidConley/machinelearning05
+
+#Programming elements:
+#Principal Component Analysis
+
+#In class programming:
+#1. Principal Component Analysis
+#a. Apply PCA on CC dataset.
+#b. Apply k-means algorithm on the PCA result and report your observation if the silhouette score has improved or not?
+#c. Perform Scaling+PCA+K-Means and report performance.
+#2. Use pd_speech_features.csv
+#a. Perform Scaling
+#b. Apply PCA (k=3)
+#c. Use SVM to report performance
+#3. Apply Linear Discriminant Analysis (LDA) on Iris.csv dataset to reduce dimensionality of data to k=2.
+#4. Briefly identify the difference between PCA and LDA
+
+#Submission guideline:
+#• Make a report, containing screenshots of your results.
+#• Provide brief description with each screenshot to elaborate the output results.
+#• Push your code to github and provide link in your report.
+#• Also make 1-3 mins video demonstrating your results (Exemption of video submission if demonstrated in class). 
+
+import numpy as np
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.metrics import confusion_matrix, classification_report, mean_squared_error, accuracy_score
+from sklearn import metrics
+from sklearn.cluster import KMeans
+from sklearn import metrics, preprocessing
+from sklearn.svm import SVC, LinearSVC
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+sns.set(style="white", color_codes=True)
+import warnings
+warnings.filterwarnings("ignore")
+
+#1
+##a
+dataset = pd.read_csv('CC.csv')
+dataset2 = dataset.fillna(dataset.mean()).drop(['CUST_ID'], axis=1)
+x = dataset.iloc[:,[1,2,3,4]]
+y = dataset.iloc[:,-1]
+scaler = StandardScaler()
+scaler.fit(x)
+x_scaler = scaler.transform(x)
+pca = PCA(2)
+pca.fit(dataset2)
+x_pca = pca.fit_transform(x_scaler)
+df2 = pd.DataFrame(data=x_pca)
+print(df2)
+
+#pca2 = PCA(n_clusters=3)
+#pca2.fit(dataset2)
+#y_cluster_pca = pcas2.predict(dataset2)
+#score = metrics.silhouette_score(dataset2, y_cluster_pca)
+#print(score)
+
+##b
+dataset2 = dataset.fillna(dataset.mean()).drop(['CUST_ID'], axis=1)
+wcss = []
+for i in range(1,11):
+    kmeans = KMeans(n_clusters=i,init='k-means++',max_iter=300,n_init=10,random_state=0)
+    kmeans.fit(dataset2)
+    wcss.append(kmeans.inertia_)
+
+plt.plot(range(1,11),wcss, 'bx-')
+plt.title('the elbow method')
+plt.xlabel('Number of Clusters')
+plt.ylabel('Wcss')
+plt.show()
+
+kmeans2 = KMeans(n_clusters=3)
+kmeans2.fit(df2)
+y_cluster_kmeans = kmeans2.predict(df2)
+score = metrics.silhouette_score(df2, y_cluster_kmeans)
+print(score)
+
+##c
+df3 = dataset2.copy()
+df3.head()
+
+X = df3.drop('TENURE',axis=1).values
+y = df3['TENURE'].values
+
+X_Scale = scaler.fit_transform(X)
+
+pca2 = PCA(n_components=2)
+principalComponents = pca2.fit_transform(X_Scale)
+
+principalDf = pd.DataFrame(data = principalComponents, columns = ['principal component 1', 'principal component 2'])
+
+finalDf = pd.concat([principalDf, dataset2[['TENURE']]], axis = 1)
+finalDf.head()
+
+X = finalDf.drop('TENURE',axis=1).values
+y = finalDf['TENURE'].values
+
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.3,random_state=0)
+
+%%time
+
+logisticRegr = LogisticRegression()
+logisticRegr.fit(X_train,y_train)
+
+y_train_hat =logisticRegr.predict(X_train)
+train_accuracy = accuracy_score(y_train, y_train_hat)*100
+print('"Accuracy for our Training dataset with PCA is: %.4f %%' % train_accuracy)
+
+%%time
+
+y_test_hat=logisticRegr.predict(X_test)
+test_accuracy=accuracy_score(y_test,y_test_hat)*100
+test_accuracy
+print("Accuracy for our Testing dataset with tuning is : {:.3f}%".format(test_accuracy) )
+
+#2
+datasetB = pd.read_csv('pd_speech_features.csv')
+datasetB.head()
+
+##a
+scaler = StandardScaler()
+datasetB2 = scaler.fit_transform(datasetB)
+datasetB2
+
+##b
+X_Scale = scaler.fit_transform(X)
+
+pca2 = PCA(n_components=2)
+principalComponents = pca2.fit_transform(X_Scale)
+
+principalDf = pd.DataFrame(data = principalComponents, columns = ['principal component 1', 'principal component 2'])
+
+finalDf = pd.concat([principalDf, datasetB[['class']]], axis = 1)
+finalDf.head()
+
+##c
+X_train = datasetB.drop("class", axis=1)
+Y_train = datasetB["class"]
+
+X_test = datasetB.drop("id",axis=1)
+
+svc = SVC(max_iter=1000)
+
+svc.fit(X_train, Y_train)
+
+Y_pred = svc.predict(X_test)
+
+acc_svc = round(svc.score(X_train, Y_train) * 100, 2)
+
+print("svm accuracy =", acc_svc)
+
+#3
+datasetC = pd.read_csv('Iris.csv')
+datasetC.head()
+
+datasetC2 = datasetC.drop("Species", axis=1)
+datasetC['Species'].value_counts()
+
+scaler = StandardScaler()
+
+X = datasetC2.drop('PetalWidthCm',axis=1).values
+y = datasetC2['PetalWidthCm'].values
+
+X_Scale = scaler.fit_transform(X)
+
+pca2 = PCA(n_components=2)
+principalComponents = pca2.fit_transform(X_Scale)
+
+principalDfC = pd.DataFrame(data = principalComponents, columns = ['principal component 1', 'principal component 2'])
+
+finalDfC = pd.concat([principalDfC, datasetC2[['PetalWidthCm']]], axis = 1)
+finalDfC.head()
+
+plt.figure(figsize=(7,7))
+plt.scatter(finalDfC['principal component 1'],finalDfC['principal component 2'],c=finalDfC['PetalWidthCm'],cmap='prism', s =5)
+plt.xlabel('pc1')
+plt.ylabel('pc2')
+
+#4
+print("LDA is supervised (using class label), and PCA is unsupervised (ignoring it).")
